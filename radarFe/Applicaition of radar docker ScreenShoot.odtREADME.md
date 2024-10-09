@@ -18,8 +18,7 @@ Copy code
 docker pull iperekrestov/university:radar-emulation-service
 Run the radar emulation service:
 
-bash
-Copy code
+bash:
 docker run --name radar-emulator -p 4000:4000 iperekrestov/university:radar-emulation-service
 This command will start the radar emulator on port 4000.
 
@@ -28,29 +27,25 @@ To test the WebSocket connection, you can use wscat:
 
 Install wscat globally:
 
-bash
-Copy code
+bash: 
 npm install -g wscat
 Connect to the WebSocket server:
 
-bash
-Copy code
+bash:
 wscat -c ws://localhost:4000
 You will start receiving radar measurement data in real-time.
 
 Step 3: Run the Application
 Clone the repository:
 
-bash
-Copy code
+bash :
 git clone https://github.com/yourusername/radar-visualization.git
 Open the project directory and launch the web application using your preferred method (e.g., by opening index.html in a browser).
 
 WebSocket Message Format
 The WebSocket server sends radar data in the following format:
 
-json
-Copy code
+json:
 {
   "scanAngle": 90,
   "pulseDuration": 1,
@@ -70,11 +65,11 @@ pulseDuration: The pulse duration of the radar signal in microseconds.
 echoResponses: An array of detected objects, each containing:
 time: The time it took for the radar signal to reach the object and return (in seconds).
 power: The strength of the reflected signal (between 0 and 1).
+
 Step 4: Adjust Radar Parameters
 You can adjust the radar's behavior through the provided API. For example, you can change the number of measurements per rotation, rotation speed, or the target speed. Use the following curl command to update the parameters:
 
-bash
-Copy code
+bash:
 curl -X PUT http://localhost:4000/config -H "Content-Type: application/json" -d '{
     "measurementsPerRotation": 360,
     "rotationSpeed": 10,
@@ -89,10 +84,3 @@ numberOfTargets: The number of targets to simulate. Default: 1.
 emulationZoneSize: The size of the area in which the radar is emulating (in kilometers). Default: 200.
 Visualizing Data
 The received radar data is processed and displayed on a polar graph using libraries like Plotly. The detected targets are plotted based on their angle (azimuth) and distance (calculated from the time it takes for the radar signal to return).
-
-Future Improvements
-Add more customization options to control the visualization (e.g., changing color schemes, zoom levels).
-Improve performance when visualizing a large number of targets.
-Add features to simulate different radar conditions, such as noise or interference.
-License
-This project is open-source and available under the MIT License.
