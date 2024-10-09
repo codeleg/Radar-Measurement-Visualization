@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar Target Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <h1>Real-time Radar Target Visualization</h1>
+    <div id="myPolarChart" style="width: 600px; height: 600px;"></div>
+
+    <script>
+        // Constants
+        const SPEED_OF_LIGHT = 300000; // km/s
+
+        // WebSocket connection to the radar emulation service
+        const ws = new WebSocket('ws://localhost:4000');
+
+        let angles = [];
+        let distances = [];
+        let signalStrengths = [];
+
+        // Function to update the polar plot
+        function updatePlot() {
+            if (angles.length === 0 || distances.length === 0 || signalStrengths.length === 0) {
+                console.log("No data to plot.");
+                return; // Avoid plotting if there are no data points
+            }
+
+            const data = [{
+                type: 'scatterpolar',
+                r: distances,
+                theta: angles,
+                mode: 'markers',
+                marker: {
+                    size: 10,
+                    color: signalStrengths,
+                    colorscale: 'Viridis',
+                    showscale: true
+                }
+            }];
+
+            const layout = {
+                polar: {
+                    radialaxis: {
+                        visible: true,
+                        range: [0, Math.max(...distances, 100)]
+                    },
+                    angularaxis: {
+                        direction: 'clockwise',
+                        rotation: 90
+                    }
+                },
+                showlegend: false
+            };
+
+            Plotly.react('myPolarChart', data, layout);
+        }
+
+        // Function to process WebSocket messages
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            // Log received data for debugging
+            console.log('Received data:', data);
+
+            // Check if the message format is correct
+            if (data.scanAngle !== undefined && Array.isArray(data.echoResponses)) {
+                const angle = data.scanAngle;
+
+                // Clear previous data to show only the most recent point
+                angles = [];
+                distances = [];
+                signalStrengths = [];
+
+                data.echoResponses.forEach(response => {
+                    const time = response.time; 
+                    const power = response.power;
+
+                    // Calculate the distance
+                    const distance = (SPEED_OF_LIGHT * time) / 2; // km
+
+                    // Update arrays with new data
+                    angles.push(angle);
+                    distances.push(distance);
+                    signalStrengths.push(power * 100); // Scale signal power for color
+                });
+
+                updatePlot(); // Update the plot with new data
+            } else {
+                console.warn('Unexpected data format:', data);
+            }
+        };
+
+        ws.onopen = function() {
+            console.log('WebSocket connection opened.');
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket connection closed.');
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        // Function to change radar parameters via API
+        function updateRadarParams(measurementsPerRotation, rotationSpeed, targetSpeed) {
+            const config = {
+                measurementsPerRotation: measurementsPerRotation,
+                rotationSpeed: rotationSpeed,
+                targetSpeed: targetSpeed
+            };
+
+            fetch('http://localhost:4000/config', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Radar parameters updated:', data);
+            })
+            .catch(error => {
+                console.error('Error updating radar parameters:', error);
+            });
+        }
+
+        // Example usage of API to update radar settings
+        updateRadarParams(360, 10, 500); // Modify parameters as needed
+    </script>
+</body>
+</html>
