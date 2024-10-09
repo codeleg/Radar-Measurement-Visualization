@@ -1,150 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+Key Components:
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar Target Visualization</title>
-    <!-- Load Plotly library for charting -->
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-</head>
+WebSocket Connection:
+Establishes a connection to a radar emulation service at ws://localhost:4000.
+Handles incoming messages containing radar scan data.
 
-<body>
-    <h1>Real-time Radar Target Visualization</h1>
-    <!-- Container for the polar chart -->
-    <div id="myPolarChart" style="width: 600px; height: 600px;"></div>
+Data Processing:
+Parses incoming data messages that include:
+scanAngle: The angle at which the radar scanned.
+echoResponses: An array of echo responses containing time and power.
 
-    <script>
-        // Constants
-        const SPEED_OF_LIGHT = 300000; // Speed of light in km/s
+Calculates distance using the formula:
+Distance= (SPEED_OF_LIGHT×time ) / 2
+ 
+Updates arrays for angles, distances, and signal strengths for visualization.
 
-        // Create a WebSocket connection to the radar emulation service
-        const ws = new WebSocket('ws://localhost:4000');
+Visualization:
+Uses Plotly.js to render a polar scatter plot based on the updated data.
+Configures the plot with radial and angular axes and color scales representing signal strength.
 
-        // Arrays to hold radar data
-        let angles = []; // Holds the angles of the radar scan
-        let distances = []; // Holds the calculated distances of targets
-        let signalStrengths = []; // Holds the signal strength of the echoes
+Radar Parameter Updates:
+Provides a function to update radar parameters (e.g., measurements per rotation, rotation speed, and target speed) through a REST API.
+Sends configuration updates to http://localhost:4000/config using a PUT request.
 
-        // Function to update the polar plot with new data
-        function updatePlot() {
-            // Check if data arrays are empty
-            if (angles.length === 0 || distances.length === 0 || signalStrengths.length === 0) {
-                console.log("No data to plot.");
-                return; // Exit if there's no data to plot
-            }
-
-            // Prepare data for the polar scatter plot
-            const data = [{
-                type: 'scatterpolar',
-                r: distances, // Radial distances
-                theta: angles, // Angles
-                mode: 'markers', // Display as markers
-                marker: {
-                    size: 10, // Size of the markers
-                    color: signalStrengths, // Color based on signal strength
-                    colorscale: 'Viridis', // Color scale
-                    showscale: true // Show color scale
-                }
-            }];
-
-            // Define the layout for the plot
-            const layout = {
-                polar: {
-                    radialaxis: {
-                        visible: true,
-                        range: [0, Math.max(...distances, 100)] // Set the radial range based on max distance
-                    },
-                    angularaxis: {
-                        direction: 'clockwise', // Clockwise angle direction
-                        rotation: 90 // Rotate the angle axis for better orientation
-                    }
-                },
-                showlegend: false // Disable legend
-            };
-
-            // Update the plot with new data
-            Plotly.react('myPolarChart', data, layout);
-        }
-
-        // Function to handle incoming WebSocket messages
-        ws.onmessage = function(event) {
-            // Parse the received data
-            const data = JSON.parse(event.data);
-
-            // Log received data for debugging
-            console.log('Received data:', data);
-
-            // Check if the message format is correct
-            if (data.scanAngle !== undefined && Array.isArray(data.echoResponses)) {
-                const angle = data.scanAngle;
-
-                // Clear previous data to show only the most recent point
-                angles = [];
-                distances = [];
-                signalStrengths = [];
-
-                // Process each echo response
-                data.echoResponses.forEach(response => {
-                    const time = response.time; // Time taken for the echo to return
-                    const power = response.power; // Power of the echo
-
-                    // Calculate the distance based on the time of flight
-                    const distance = (SPEED_OF_LIGHT * time) / 2; // Divide by 2 to account for round trip
-
-                    // Update arrays with new data
-                    angles.push(angle);
-                    distances.push(distance);
-                    signalStrengths.push(power * 100); // Scale signal power for color representation
-                });
-
-                // Update the plot with the new data
-                updatePlot();
-            } else {
-                console.warn('Unexpected data format:', data); // Log a warning for unexpected data
-            }
-        };
-
-        // WebSocket event handlers
-        ws.onopen = function() {
-            console.log('WebSocket connection opened.'); // Log when the connection is opened
-        };
-
-        ws.onclose = function() {
-            console.log('WebSocket connection closed.'); // Log when the connection is closed
-        };
-
-        ws.onerror = function(error) {
-            console.error('WebSocket error:', error); // Log any WebSocket errors
-        };
-
-        // Function to change radar parameters via API
-        function updateRadarParams(measurementsPerRotation, rotationSpeed, targetSpeed) {
-            const config = {
-                measurementsPerRotation: measurementsPerRotation, // Number of measurements in a single rotation
-                rotationSpeed: rotationSpeed, // Speed of radar rotation
-                targetSpeed: targetSpeed // Speed of the target being tracked
-            };
-
-            // Send a PUT request to update the radar configuration
-            fetch('http://localhost:4000/config', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(config) // Send the configuration as JSON
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Radar parameters updated:', data); // Log confirmation of parameter update
-            })
-            .catch(error => {
-                console.error('Error updating radar parameters:', error); // Log any errors in the update process
-            });
-        }
-
-        // Example usage of the API to update radar settings
-        updateRadarParams(360, 10, 500); // Modify parameters as needed
-    </script>
-</body>
-</html>
+Error Handling:
+Implements logging for various WebSocket events, including opening, closing, and errors, along with data format validation.
