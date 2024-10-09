@@ -10,11 +10,11 @@ To run the project, you need the following software installed on your system:
 Docker: To run the radar emulator container.
 Node.js (Optional): To install and use wscat for testing WebSocket connections.
 Setup Instructions
+
 Step 1: Run the Radar Emulator
 Download the radar emulation service Docker image:
 
-bash
-Copy code
+bash:
 docker pull iperekrestov/university:radar-emulation-service
 Run the radar emulation service:
 
@@ -29,6 +29,7 @@ Install wscat globally:
 
 bash: 
 npm install -g wscat
+
 Connect to the WebSocket server:
 
 bash:
@@ -46,6 +47,7 @@ WebSocket Message Format
 The WebSocket server sends radar data in the following format:
 
 json:
+
 {
   "scanAngle": 90,
   "pulseDuration": 1,
